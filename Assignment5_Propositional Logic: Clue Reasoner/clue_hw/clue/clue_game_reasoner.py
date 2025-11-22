@@ -58,34 +58,121 @@ class ClueGameReasoner:
         # Each card is in at least one place (including case file).
         # If you want to change the string representation of the variables,
         #   go ahead!
+
         for c in CARDS:
             clause = ""
             for p in POSSIBLE_CARD_LOCATIONS:
                 clause += c + "_" + p + " "
             clauses.append(clause)
-
-
         # TO BE IMPLEMENTED AS AN EXERCISE:
 
         # A card cannot be in two places.
+        for c in CARDS:
+            for i in range(len(POSSIBLE_CARD_LOCATIONS)):
+                for j in range(i + 1, len(POSSIBLE_CARD_LOCATIONS)):
+                    p1 = POSSIBLE_CARD_LOCATIONS[i]
+                    p2 = POSSIBLE_CARD_LOCATIONS[j]
+                    clause = "~" + c + "_" + p1 + " " + "~" + c + "_" + p2
+                    clauses.append(clause)
 
         # At least one card of each category is in the case file.
+        # Suspects
+        clause = ""
+        for s in SUSPECTS:
+            clause += s + "_" + CASE_FILE + " "
+        clauses.append(clause)
+
+        # Weapons
+        clause = ""
+        for w in WEAPONS:
+            clause += w + "_" + CASE_FILE + " "
+        clauses.append(clause)
+
+        # Rooms
+        clause = ""
+        for r in ROOMS:
+            clause += r + "_" + CASE_FILE + " "
+        clauses.append(clause)
 
         # No two cards in each category can both be in the case file.
+        # Suspects
+        for i in range(len(SUSPECTS)):
+            for j in range(i + 1, len(SUSPECTS)):
+                s1 = SUSPECTS[i]
+                s2 = SUSPECTS[j]
+                clause = "~" + s1 + "_" + CASE_FILE + " " + "~" + s2 + "_" + CASE_FILE
+                clauses.append(clause)
+
+        # Weapons
+        for i in range(len(WEAPONS)):
+            for j in range(i + 1, len(WEAPONS)):
+                w1 = WEAPONS[i]
+                w2 = WEAPONS[j]
+                clause = "~" + w1 + "_" + CASE_FILE + " " + "~" + w2 + "_" + CASE_FILE
+                clauses.append(clause)
+
+        # Rooms
+        for i in range(len(ROOMS)):
+            for j in range(i + 1, len(ROOMS)):
+                r1 = ROOMS[i]
+                r2 = ROOMS[j]
+                clause = "~" + r1 + "_" + CASE_FILE + " " + "~" + r2 + "_" + CASE_FILE
+                clauses.append(clause)
 
         self.KB = sat_interface.KB(clauses)
 
     def add_hand(self, player_name, hand_cards):
-        '''Add the information about the given player's hand to the KB'''
-        # TO BE IMPLEMENTED AS AN EXERCISE
+        for card in hand_cards:
+            self.KB.add_clause(card + "_" + player_name)
+            for loc in POSSIBLE_CARD_LOCATIONS:
+                if loc != player_name:
+                    self.KB.add_clause("~" + card + "_" + loc)
+
 
     def suggest(self, suggester, c1, c2, c3, refuter, cardshown = None):
-        '''Add information about a given suggestion to the KB'''
-        # TO BE IMPLEMENTED AS AN EXERCISE
+        cards = [c1, c2, c3]
+        num_players = len(self.players)
+        sugg_index = self.players.index(suggester)
+
+        if refuter is None:
+            idx = (sugg_index + 1) % num_players
+            while idx != sugg_index:
+                p = self.players[idx]
+                for card in cards:
+                    self.KB.add_clause("~" + card + "_" + p)
+                idx = (idx + 1) % num_players
+        else:
+            ref_index = self.players.index(refuter)
+            idx = (sugg_index + 1) % num_players
+            while idx != ref_index:
+                p = self.players[idx]
+                for card in cards:
+                    self.KB.add_clause("~" + card + "_" + p)
+                idx = (idx + 1) % num_players
+
+            if cardshown is not None:
+                
+                self.KB.add_clause(cardshown + "_" + refuter)
+            else:
+                clause = ""
+                for card in cards:
+                    clause += card + "_" + refuter + " "
+                self.KB.add_clause(clause)
+
 
     def accuse(self, accuser, c1, c2, c3, iscorrect):
         '''Add information about a given accusation to the KB'''
-        # TO BE IMPLEMENTED AS AN EXERCISE
+        cards = [c1, c2, c3]
+
+        if iscorrect:
+            for card in cards:
+                self.KB.add_clause(card + "_" + CASE_FILE)
+        else:
+            clause = ""
+            for card in cards:
+                clause += "~" + card + "_" + CASE_FILE + " "
+            self.KB.add_clause(clause)
+
 
     def print_notepad(self):
         print("Clue Game Notepad:")
